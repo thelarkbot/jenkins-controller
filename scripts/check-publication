@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+repository=$(git -C "$script_dir/.." rev-parse --show-toplevel)
+scanner="$repository/scripts/publication_guard.py"
+hash_file="$repository/publication-denylist.sha256"
+denylist="${PUBLICATION_DENYLIST:-}"
+args=(--hash-file "$hash_file")
+[[ -z "$denylist" ]] || args+=(--denylist "$denylist")
+
+mapfile -d '' tracked < <(git -C "$repository" ls-files -z)
+paths=()
+for path in "${tracked[@]}"; do paths+=("$repository/$path"); done
+python3 "$scanner" "${args[@]}" "${paths[@]}"
+
+temporary_dir=$(mktemp -d)
+trap 'rm -rf -- "$temporary_dir"' EXIT
+git -C "$repository" log --format='%H%n%B' --all >"$temporary_dir/commit-messages.txt"
+git -C "$repository" diff --binary upstream/main..HEAD >"$temporary_dir/outgoing.patch" 2>/dev/null || :
+printf '%s\n%s\n' "${PULL_REQUEST_TITLE:-}" "${PULL_REQUEST_BODY:-}" >"$temporary_dir/pull-request.txt"
+python3 "$scanner" "${args[@]}" \
+    "$temporary_dir/commit-messages.txt" \
+    "$temporary_dir/outgoing.patch" \
+    "$temporary_dir/pull-request.txt"
+python3 "$scanner" "${args[@]}" --repository "$repository"
+printf 'publication checks passed\n'

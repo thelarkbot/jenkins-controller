@@ -1,0 +1,23 @@
+ARG JENKINS_CONTROLLER_IMAGE=docker.io/jenkins/jenkins@sha256:8279be0a0ed95ad3b67c8677b9e03ff322f61338d39244234a907e9039ac3683
+FROM ${JENKINS_CONTROLLER_IMAGE}
+
+USER root
+
+COPY plugins.lock /usr/share/jenkins/ref/plugins.lock.txt
+RUN jenkins-plugin-cli \
+        --jenkins-version 2.568.1 \
+        --plugin-file /usr/share/jenkins/ref/plugins.lock.txt \
+        --plugin-download-directory /usr/share/jenkins/ref/plugins \
+        --latest=false
+
+COPY plugins.sha256 /tmp/plugins.sha256
+RUN cd /usr/share/jenkins/ref/plugins \
+    && sha256sum --check /tmp/plugins.sha256 \
+    && rm /tmp/plugins.sha256
+
+COPY casc/jenkins.yaml /usr/share/jenkins/ref/casc/jenkins.yaml
+
+ENV CASC_JENKINS_CONFIG=/usr/share/jenkins/ref/casc/jenkins.yaml \
+    JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+
+USER jenkins

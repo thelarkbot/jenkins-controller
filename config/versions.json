@@ -1,0 +1,12 @@
+{
+  "controller": {
+    "amd64_digest": "sha256:8279be0a0ed95ad3b67c8677b9e03ff322f61338d39244234a907e9039ac3683",
+    "image": "docker.io/jenkins/jenkins",
+    "tag": "2.568.1-jdk21"
+  },
+  "local_image": "localhost/jenkins-controller:lab-local",
+  "remoting": {
+    "sha256": "2eba7803ff8f59d25b6cac7c13f4f99d39ed6173bf011f8b781b35d0a5e76f19",
+    "version": "3384.v60d89463d9e0"
+  }
+}

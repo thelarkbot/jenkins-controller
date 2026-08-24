@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+repository=$(cd -- "$script_dir/.." && pwd -P)
+controller_digest=$(python3 -c \
+    'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["controller"]["amd64_digest"])' \
+    "$repository/config/versions.json")
+controller_image="docker.io/jenkins/jenkins@$controller_digest"
+temporary_dir=$(mktemp -d)
+trap 'rm -rf -- "$temporary_dir"' EXIT
+
+podman run --rm \
+    --userns=keep-id \
+    --user "$(id -u):$(id -g)" \
+    --env HOME=/tmp \
+    --volume "$repository/plugins.requested.txt:/input/plugins.requested.txt:ro" \
+    --volume "$temporary_dir:/plugins" \
+    --entrypoint /bin/jenkins-plugin-cli \
+    "$controller_image" \
+    --jenkins-version 2.568.1 \
+    --plugin-file /input/plugins.requested.txt \
+    --plugin-download-directory /plugins \
+    --clean-download-directory \
+    --latest=true
+
+python3 "$repository/scripts/plugin_lock.py" \
+    --plugin-dir "$temporary_dir" \
+    --lock "$repository/plugins.lock" \
+    --checksums "$repository/plugins.sha256"
+
+printf 'Regenerated plugins.lock and plugins.sha256 with %s\n' "$controller_image"

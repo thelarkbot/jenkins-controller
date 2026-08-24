@@ -1,0 +1,20 @@
+jenkins:
+  systemMessage: "Disposable local verification controller"
+  numExecutors: 0
+  mode: EXCLUSIVE
+  slaveAgentPort: -1
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "jlab-admin"
+          password: "${trim:${readFile:/run/secrets/jlab-admin-password}}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  remotingSecurity:
+    enabled: true
+
+unclassified:
+  location:
+    url: "http://127.0.0.1:18080/"
